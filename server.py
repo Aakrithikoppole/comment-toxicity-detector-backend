@@ -154,7 +154,7 @@ def predict():
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
 
-    """
+  
 
 
 
@@ -204,6 +204,66 @@ def predict():
     result = response.json()
 
     return jsonify(result)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
+
+    """
+
+
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import requests
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+API_URL = "https://api-inference.huggingface.co/models/Aakrithi19/comment-toxicity-detector"
+
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
+@app.route("/")
+def home():
+    return "Toxicity Detection API Running"
+
+
+@app.route("/predict", methods=["POST"])
+def predict():
+
+    data = request.json
+    comment = data.get("comment", "")
+
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json={"inputs": comment}
+    )
+
+    result = response.json()
+
+    scores = {
+        "toxic":0,
+        "insult":0,
+        "obscene":0,
+        "identity_hate":0
+    }
+
+    if isinstance(result,list):
+        for item in result:
+            label = item["label"].lower()
+            score = item["score"]
+
+            if label in scores:
+                scores[label] = score
+
+    return jsonify(scores)
 
 
 if __name__ == "__main__":
