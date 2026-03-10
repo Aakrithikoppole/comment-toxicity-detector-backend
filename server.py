@@ -238,31 +238,66 @@ def home():
 def predict():
 
     data = request.json
-    comment = data.get("comment", "")
+    comment = data.get("comment","")
 
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json={"inputs": comment}
-    )
+    try:
 
-    result = response.json()
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json={"inputs": comment}
+        )
 
-    scores = {
-        "toxic":0,
-        "insult":0,
-        "obscene":0,
-        "identity_hate":0
-    }
+        result = response.json()
 
-    if isinstance(result,list):
-        for item in result:
-            label = item["label"].lower()
-            score = item["score"]
+        print("HF response:", result)
 
-            if label in scores:
-                scores[label] = score
+        scores = {
+            "toxic":0,
+            "insult":0,
+            "obscene":0,
+            "identity_hate":0
+        }
 
-    return jsonify(scores)
+        # Handle model loading case
+        if isinstance(result, dict) and "error" in result:
+            return jsonify(scores)
+
+        # HuggingFace sometimes returns [[...]]
+        if isinstance(result, list):
+
+            if len(result) > 0 and isinstance(result[0], list):
+                result = result[0]
+
+            for item in result:
+
+                label = item.get("label","").lower()
+                score = item.get("score",0)
+
+                if label == "toxic":
+                    scores["toxic"] = score
+
+                elif label == "insult":
+                    scores["insult"] = score
+
+                elif label == "obscene":
+                    scores["obscene"] = score
+
+                elif label == "identity_hate":
+                    scores["identity_hate"] = score
+
+        return jsonify(scores)
+
+    except Exception as e:
+
+        print("Prediction error:", e)
+
+        return jsonify({
+            "toxic":0,
+            "insult":0,
+            "obscene":0,
+            "identity_hate":0
+        })
 
 
+# IMPORTANT: No app.run() because Render runs via gunicorn
