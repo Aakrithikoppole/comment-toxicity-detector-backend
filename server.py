@@ -226,7 +226,8 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 API_URL = "https://router.huggingface.co/hf-inference/models/Aakrithi19/comment-toxicity-detector"
 
 headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
 }
 
 @app.route("/")
@@ -240,28 +241,34 @@ def predict():
     data = request.json
     comment = data.get("comment","")
 
+    scores = {
+        "toxic":0,
+        "insult":0,
+        "obscene":0,
+        "identity_hate":0
+    }
+
     try:
 
         response = requests.post(
             API_URL,
             headers=headers,
-            json={"inputs": comment}
+            json={"inputs": comment},
+            timeout=15
         )
+
+        print("HF status:", response.status_code)
+        print("HF raw:", response.text)
+
+        if response.status_code != 200:
+            return jsonify(scores)
 
         result = response.json()
 
-        print("HF RESPONSE:", result)
-
-        scores = {
-            "toxic":0,
-            "insult":0,
-            "obscene":0,
-            "identity_hate":0
-        }
-
+        # HuggingFace sometimes returns [[...]]
         if isinstance(result,list):
 
-            if isinstance(result[0],list):
+            if len(result) > 0 and isinstance(result[0], list):
                 result = result[0]
 
             for item in result:
@@ -287,9 +294,4 @@ def predict():
 
         print("Prediction error:", e)
 
-        return jsonify({
-            "toxic":0,
-            "insult":0,
-            "obscene":0,
-            "identity_hate":0
-        })
+        return jsonify(scores)
