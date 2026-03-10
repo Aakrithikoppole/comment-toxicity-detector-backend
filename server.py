@@ -223,7 +223,7 @@ CORS(app)
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-API_URL = "https://api-inference.huggingface.co/models/Aakrithi19/comment-toxicity-detector"
+API_URL = "https://router.huggingface.co/hf-inference/models/Aakrithi19/comment-toxicity-detector"
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}"
@@ -250,7 +250,7 @@ def predict():
 
         result = response.json()
 
-        print("HF response:", result)
+        print("HF RESPONSE:", result)
 
         scores = {
             "toxic":0,
@@ -259,14 +259,9 @@ def predict():
             "identity_hate":0
         }
 
-        # Handle model loading case
-        if isinstance(result, dict) and "error" in result:
-            return jsonify(scores)
+        if isinstance(result,list):
 
-        # HuggingFace sometimes returns [[...]]
-        if isinstance(result, list):
-
-            if len(result) > 0 and isinstance(result[0], list):
+            if isinstance(result[0],list):
                 result = result[0]
 
             for item in result:
@@ -298,6 +293,3 @@ def predict():
             "obscene":0,
             "identity_hate":0
         })
-
-
-# IMPORTANT: No app.run() because Render runs via gunicorn
